@@ -15,35 +15,39 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 
-
 @Service
 public class DocusignAuthServiceImpl implements DocusignAuthService {
 
     @Autowired
     private ApplicationContext ctx;
-
-    @Value("docusign.private.key.file.name")
+    @Value("${docusign.private.key.file.name}")
     private String privateKeyFileName;
-    @Value("docusign.client.id")
+    @Value("${docusign.client.id}")
     private String clientId;
-    @Value("docusign.user.id")
+    @Value("${docusign.user.id}")
     private String userId;
-    @Value("docusign.user.scopes")
+    @Value("${docusign.user.scopes}")
     private String scope;
 
-    int accessExpirationMs=9600000;
     private static final long TOKEN_EXPIRATION_IN_SECONDS = 3600;
 
     @Override
     public ApiClient getDocusignClient(){
 
+        // 1
         InputStream privateKey = readFileFromResources(privateKeyFileName);
+
+        // 2
         List<String> scopes = Arrays.stream(scope.split(",")).toList();
 
         try {
+            // 3
             ApiClient apiClient = new ApiClient();
+
+            // 4
             byte[] privateKeyBytes = privateKey.readAllBytes();
 
+            //5
             OAuth.OAuthToken oAuthToken = apiClient.requestJWTUserToken(
                     clientId,
                     userId,
@@ -52,8 +56,10 @@ public class DocusignAuthServiceImpl implements DocusignAuthService {
                     TOKEN_EXPIRATION_IN_SECONDS
             );
 
+            //6
             String accessToken = oAuthToken.getAccessToken();
 
+            //7
             apiClient.addDefaultHeader("Authorization", "Bearer " + accessToken);
 
             return apiClient;
@@ -62,6 +68,7 @@ public class DocusignAuthServiceImpl implements DocusignAuthService {
         }
     }
 
+    //8
     private InputStream readFileFromResources(String fileName){
         Resource resource = ctx.getResource("classpath:" + fileName);
         File file = null;
@@ -75,5 +82,4 @@ public class DocusignAuthServiceImpl implements DocusignAuthService {
 
         return inputStream;
     }
-
 }

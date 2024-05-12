@@ -19,16 +19,21 @@ public class DocusignServiceImpl implements DocusignService {
     @Autowired
     private DocusignAuthService authService;
 
-    @Value("docusign.account.id")
+    @Value("${docusign.account.id}")
     private String accountId;
 
     @Override
     public EnvelopeSummary sendNewEnvelope(CreateEnvelopeRequestBody requestBody) throws ApiException {
+        //1
         ApiClient apiClient = authService.getDocusignClient();
+
+        //2
         EnvelopesApi envelopesApi = new EnvelopesApi(apiClient);
 
+        //3
         Envelope envelope = new Envelope();
 
+        //4
         List<TemplateRole> roleList = requestBody.getSigners().stream().map(
                  item -> new TemplateRole()
                          .roleName(item.getRoleName())
@@ -36,12 +41,14 @@ public class DocusignServiceImpl implements DocusignService {
                          .name(item.getName())
         ).collect(Collectors.toList());
 
+        //5
         EnvelopeDefinition definition = new EnvelopeDefinition()
                 .envelopeId(envelope.getEnvelopeId())
                 .status(requestBody.getStatus())
                 .templateId(requestBody.getTemplateId())
                 .templateRoles(roleList);
 
+        //6
         return envelopesApi.createEnvelope(accountId, definition);
     }
 
@@ -52,38 +59,24 @@ public class DocusignServiceImpl implements DocusignService {
 
         Envelope envelope = new Envelope();
 
+        //7
         Signer signer = new Signer()
                 .email(email)
                 .recipientId("2")
                 .roleName("stranger_signer");
 
+        //8
         Recipients recipients = new Recipients()
                 .addSignersItem(signer);
 
+        //9
         envelope.setRecipients(recipients);
 
+        //10
         EnvelopesApi.UpdateRecipientsOptions updateOptions = envelopesApi.new UpdateRecipientsOptions();
         updateOptions.setResendEnvelope("true");
 
+        //11
         return  envelopesApi.updateRecipients(accountId, envelopeId, recipients, updateOptions);
-    }
-
-    @Override
-    public List<Envelope> listAllEnvelopes(String dateFrom) throws ApiException {
-        ApiClient apiClient = authService.getDocusignClient();
-        EnvelopesApi envelopesApi = new EnvelopesApi(apiClient);
-
-        EnvelopesApi.ListStatusChangesOptions options = envelopesApi.new ListStatusChangesOptions();
-        options.setFromDate(dateFrom);
-        options.setInclude("recipients");
-
-        EnvelopesInformation envelopesInformation = envelopesApi.listStatusChanges(accountId, options);
-
-        return envelopesInformation.getEnvelopes().stream()
-                .filter(envelope -> envelope.getStatus().equals("sent"))
-                .filter(envelope -> envelope.getRecipients().getSigners().stream().anyMatch(
-                                signer -> signer.getStatus().equals("autoresponded")
-                        )
-                ).collect(Collectors.toList());
     }
 }
